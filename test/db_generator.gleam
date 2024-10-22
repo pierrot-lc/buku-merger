@@ -33,6 +33,16 @@ pub fn print_db(conn: Connection) {
 /// Generate a temporary in-memory bookmarks database. The database is
 /// initialized with the given list of bookmarks.
 ///
+/// # Examples
+///
+/// ```gleam
+/// let bookmarks = [
+///   Bookmark("www.google.fr", "Google desc"),
+///   Bookmark("www.gleam.run", "Gleam!"),
+/// ]
+/// use conn <- db_generator.fictive_bookmarks(bookmarks)
+/// ```
+///
 pub fn fictive_bookmarks(bookmarks: List(Bookmark), f: fn(Connection) -> a) -> a {
   use conn <- sqlight.with_connection(":memory:")
 
