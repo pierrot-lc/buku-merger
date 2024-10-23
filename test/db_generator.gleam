@@ -3,15 +3,10 @@ import gleam/int
 import gleam/io
 import gleam/list
 import gleam/string
-import sqlight.{type Connection, type Value}
+import sqlight.{type Connection}
 
 pub type Bookmark {
   Bookmark(url: String, desc: String)
-}
-
-fn bookmark_value(bookmark: Bookmark) -> Value {
-  let bookmark = "('" <> bookmark.url <> "', '" <> bookmark.desc <> "')"
-  sqlight.text(bookmark)
 }
 
 pub fn print_db(conn: Connection) {
@@ -43,18 +38,16 @@ pub fn print_db(conn: Connection) {
 /// use conn <- db_generator.fictive_bookmarks(bookmarks)
 /// ```
 ///
-pub fn fictive_bookmarks(bookmarks: List(Bookmark), f: fn(Connection) -> a) -> a {
-  use conn <- sqlight.with_connection(":memory:")
-
-  // Create the database.
+pub fn insert_bookmarks(
+  bookmarks: List(Bookmark),
+  table: String,
+  conn: Connection,
+) {
+  // Create the table if necessary.
   let query =
-    "
-  CREATE TABLE bookmarks (
-    id INTEGER PRIMARY KEY,
-    url text,
-    desc text
-  );
-  "
+    " CREATE TABLE IF NOT EXISTS "
+    <> table
+    <> " ( id INTEGER PRIMARY KEY, url text, desc text);"
   let assert Ok(Nil) = sqlight.exec(query, conn)
 
   // Insert the bookmarks.
@@ -63,8 +56,7 @@ pub fn fictive_bookmarks(bookmarks: List(Bookmark), f: fn(Connection) -> a) -> a
     |> list.map(fn(_) { "(?, ?)" })
     |> string.join(", ")
     |> string.append(";")
-    |> string.append("INSERT INTO bookmarks (url, desc) VALUES ", _)
-    |> io.debug
+    |> string.append("INSERT INTO " <> table <> " (url, desc) VALUES ", _)
 
   let with =
     bookmarks
@@ -73,7 +65,4 @@ pub fn fictive_bookmarks(bookmarks: List(Bookmark), f: fn(Connection) -> a) -> a
 
   let assert Ok(_) =
     sqlight.query(query, on: conn, with: with, expecting: dynamic.dynamic)
-
-  // Use the function now that the database is created.
-  f(conn)
 }

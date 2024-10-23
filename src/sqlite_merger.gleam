@@ -1,29 +1,47 @@
 import gleam/dynamic
-import gleam/io
 import gleam/list
-import gleam/set.{type Set}
-import sqlight
+import gleam/string
+import sqlight.{type Connection}
 
-fn list_items(db: String) -> Set(Int) {
-  use conn <- sqlight.with_connection("file:" <> db)
-  let query = "SELECT id, id FROM bookmarks;"
+pub type Id {
+  Id(Int)
+}
+
+pub type TableDiff {
+  TableDiff(added: List(Id), removed: List(Id), modified: List(Id))
+}
+
+/// Find the element present in the target table but not in source table. An
+/// element identified by its ID and URL column value. Returns the primary IDs of the
+/// selected rows.
+pub fn bookmarks_added(
+  conn: Connection,
+  source source: String,
+  target target: String,
+) -> List(Id) {
+  let query =
+    [
+      "SELECT t1.id FROM",
+      target,
+      "as t1 JOIN",
+      source,
+      "as t2 on t1.id = t2.id WHERE t1.url != t2.url;",
+    ]
+    |> string.join(" ")
   let decoder = dynamic.element(0, dynamic.int)
   let assert Ok(ids) =
     sqlight.query(query, on: conn, with: [], expecting: decoder)
-
-  ids
-  |> list.map(fn(x) { x })
-  |> set.from_list
+  ids |> list.map(fn(id) { Id(id) })
 }
 
-fn diff_items(db1: String, db2: String) -> Set(Int) {
-  let items1 = list_items(db1)
-  let items2 = list_items(db2)
-
-  set.difference(items1, items2)
+pub fn bookmarks_diff(
+  conn: Connection,
+  source: String,
+  target: String,
+) -> TableDiff {
+  todo
 }
 
 pub fn main() {
-  let ids = list_items("bookmarks.db")
-  io.println("Hey")
+  todo
 }
