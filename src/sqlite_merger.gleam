@@ -1,11 +1,9 @@
 import gleam/dynamic
-import gleam/list
 import gleam/string
 import sqlight.{type Connection}
 
-pub type Id {
-  Id(Int)
-}
+pub type Id =
+  Int
 
 pub type TableDiff {
   TableDiff(added: List(Id), removed: List(Id), modified: List(Id))
@@ -20,18 +18,18 @@ pub fn bookmarks_added(
   target target: String,
 ) -> List(Id) {
   let query =
-    [
-      "SELECT t1.id FROM",
-      target,
-      "as t1 JOIN",
-      source,
-      "as t2 on t1.id = t2.id WHERE t1.url != t2.url;",
-    ]
-    |> string.join(" ")
+    "
+  SELECT t1.id FROM target as t1
+  WHERE t1.url NOT IN
+    ( SELECT t2.url FROM source as t2);
+  "
+    |> string.replace(each: "source", with: source)
+    |> string.replace(each: "target", with: target)
+
   let decoder = dynamic.element(0, dynamic.int)
   let assert Ok(ids) =
     sqlight.query(query, on: conn, with: [], expecting: decoder)
-  ids |> list.map(fn(id) { Id(id) })
+  ids
 }
 
 pub fn bookmarks_diff(

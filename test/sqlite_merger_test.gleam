@@ -1,10 +1,11 @@
 import db_generator.{Bookmark}
 import gleam/dynamic
 import gleam/list
+import gleam/order
 import gleeunit
 import gleeunit/should
 import sqlight
-import sqlite_merger.{Id}
+import sqlite_merger.{type Id}
 
 pub fn main() {
   gleeunit.main()
@@ -20,13 +21,19 @@ pub fn added_bookmarks_test() {
     Bookmark("www.gleam.run", "Try Gleam online!"),
     Bookmark("overfitted.dev", "My personal website."),
   ]
-  let added_ids = [Id(0)]
+  let added_ids = [3]
 
   use conn <- sqlight.with_connection(":memory:")
   let _ = db_generator.insert_bookmarks(bookmarks_1, "source", conn)
   let _ = db_generator.insert_bookmarks(bookmarks_2, "target", conn)
 
   sqlite_merger.bookmarks_added(conn, "source", "target")
+  |> list.sort(fn(a, b) {
+    case a < b {
+      True -> order.Lt
+      False -> order.Gt
+    }
+  })
   |> should.equal(added_ids)
 }
 
