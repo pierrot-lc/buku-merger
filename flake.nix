@@ -21,6 +21,7 @@
       packages = with pkgs; [
         erlang_nox
         gleam
+        just
         rebar3
         sqlite
       ];
