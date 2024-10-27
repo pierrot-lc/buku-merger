@@ -1,4 +1,5 @@
 import gleam/dynamic
+import gleam/io
 import gleam/string
 import sqlight.{type Connection}
 
@@ -21,7 +22,7 @@ pub fn bookmarks_added(
     "
   SELECT t1.id FROM target as t1
   WHERE t1.url NOT IN
-    ( SELECT t2.url FROM source as t2);
+    ( SELECT t2.url FROM source as t2 );
   "
     |> string.replace(each: "source", with: source)
     |> string.replace(each: "target", with: target)
