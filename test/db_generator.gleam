@@ -1,9 +1,10 @@
-import gleam/dynamic.{type DecodeError, type Dynamic}
+import gleam/dynamic
 import gleam/int
 import gleam/io
 import gleam/list
 import gleam/string
-import sqlight.{type Connection, type Value}
+import prng/random.{type Generator}
+import sqlight.{type Connection}
 
 pub type Bookmark {
   Bookmark(
@@ -15,60 +16,59 @@ pub type Bookmark {
   )
 }
 
-pub fn bookmark_to_sqlight_args(b: Bookmark) -> List(Value) {
-  [
-    sqlight.text(b.url),
-    sqlight.text(b.metadata),
-    sqlight.text(b.tags),
-    sqlight.text(b.desc),
-    sqlight.int(b.flags),
-  ]
+/// Generates bookmarks with random strings and integers.
+///
+pub fn bookmark_generator() -> Generator(Bookmark) {
+  let string_generator = random.fixed_size_string(5)
+  let int_generator = random.int(0, 10)
+
+  use a, b, c, d, e <- random.map5(
+    string_generator,
+    string_generator,
+    string_generator,
+    string_generator,
+    int_generator,
+  )
+  Bookmark(a, b, c, d, e)
 }
 
-/// Make sure the query is fetching the columns in the right order!
-pub fn bookmark_decoder(d: Dynamic) -> Result(Bookmark, List(DecodeError)) {
-  let decoder =
-    dynamic.tuple5(
-      dynamic.string,
-      dynamic.string,
-      dynamic.string,
-      dynamic.string,
-      dynamic.int,
-    )
-  case decoder(d) {
-    Ok(b) -> Ok(Bookmark(b.0, b.1, b.2, b.3, b.4))
-    Error(e) -> Error(e)
-  }
-}
-
-pub fn print_db(conn: Connection) {
-  let query = "SELECT id, url, desc FROM bookmarks;"
+/// Prints the content of the given table.
+///
+pub fn print_db(table: String, conn: Connection) {
+  let query =
+    "SELECT id, url, desc FROM {table};"
+    |> string.replace("{table}", table)
   let decoder = dynamic.tuple3(dynamic.int, dynamic.string, dynamic.string)
   let message = sqlight.query(query, on: conn, with: [], expecting: decoder)
+
   case message {
-    Error(e) -> io.debug(e.message)
+    Error(e) -> io.println(e.message)
     Ok(results) ->
       results
       |> list.map(fn(x) { #(int.to_string(x.0), x.1, x.2) })
       |> list.map(fn(x) { [x.0, x.1, x.2] })
       |> list.map(string.join(_, " | "))
       |> string.join("\n")
-      |> io.debug
+      |> io.println
   }
 }
 
-/// Generate a temporary in-memory bookmarks database. The database is
-/// initialized with the given list of bookmarks.
+/// Insert the bookmarks to the table.
 ///
-/// # Examples
+/// If the table does not exists, it will be created.
+///
+/// ## Examples
 ///
 /// ```gleam
+/// use conn <- sqlight.with_connection(":memory:")
+/// let table = "bookmarks"
 /// let bookmarks = [
-///   Bookmark("www.google.fr", "Google desc"),
-///   Bookmark("www.gleam.run", "Gleam!"),
+///   Bookmark("https://gleam.run/", "The Gleam website!", "", "", 0),
+///   Bookmark("https://tour.gleam.run/", "Gleam Language Tour", "", "", 0),
 /// ]
-/// use conn <- db_generator.fictive_bookmarks(bookmarks)
-/// ```
+///
+/// let _ = insert_bookmarks(bookmarks, table, conn)
+/// ````
 ///
 pub fn insert_bookmarks(
   bookmarks: List(Bookmark),
@@ -78,7 +78,7 @@ pub fn insert_bookmarks(
   // Create the table if necessary.
   let query =
     "
-  CREATE TABLE IF NOT EXISTS table_name (
+  CREATE TABLE IF NOT EXISTS {table} (
     id INTEGER PRIMARY KEY,
     URL TEXT NOT NULL,
     metadata TEXT DEFAULT '',
@@ -87,7 +87,7 @@ pub fn insert_bookmarks(
     flags INTEGER DEFAULT 0
   );
     "
-    |> string.replace(each: "table_name", with: table)
+    |> string.replace("{table}", table)
   let assert Ok(Nil) = sqlight.exec(query, conn)
 
   // Insert the bookmarks.
@@ -97,13 +97,22 @@ pub fn insert_bookmarks(
     |> string.join(",\n")
     |> string.append(";")
     |> string.append(
-      "INSERT INTO " <> table <> " (URL, metadata, tags, desc, flags) VALUES ",
+      "INSERT INTO {table} (URL, metadata, tags, desc, flags) VALUES "
+        |> string.replace("{table}", table),
       _,
     )
 
   let with =
     bookmarks
-    |> list.map(bookmark_to_sqlight_args)
+    |> list.map(fn(a) {
+      [
+        sqlight.text(a.url),
+        sqlight.text(a.metadata),
+        sqlight.text(a.tags),
+        sqlight.text(a.desc),
+        sqlight.int(a.flags),
+      ]
+    })
     |> list.flatten
 
   let assert Ok(_) =
