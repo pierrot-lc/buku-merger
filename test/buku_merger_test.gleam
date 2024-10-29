@@ -13,7 +13,8 @@ pub fn main() {
   gleeunit.main()
 }
 
-/// Test if some added bookmarks are found.
+/// Test if some added bookmarks are found. After they are found, they are
+/// added back to the original table and test if both tables are equals.
 ///
 pub fn added_bookmarks_test() {
   let generator = db_generator.bookmark_generator()
@@ -48,6 +49,11 @@ pub fn added_bookmarks_test() {
   buku_merger.added_urls(conn, "source", "target")
   |> list.sort(int.compare)
   |> should.equal(added_ids)
+
+  let _ =
+    buku_merger.insert_ids(conn, added_ids, source: "target", target: "source")
+  buku_merger.added_urls(conn, "source", "target")
+  |> should.equal([])
 }
 
 /// Test if some modified URLS are found.

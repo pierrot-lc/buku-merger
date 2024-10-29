@@ -1,3 +1,4 @@
+import buku_merger.{type BookmarkTable}
 import gleam/dynamic
 import gleam/int
 import gleam/io
@@ -34,7 +35,7 @@ pub fn bookmark_generator() -> Generator(Bookmark) {
 
 /// Prints the content of the given table.
 ///
-pub fn print_db(table: String, conn: Connection) {
+pub fn print_db(table: BookmarkTable, conn: Connection) {
   let query =
     "SELECT id, url, desc FROM {table};"
     |> string.replace("{table}", table)
@@ -72,7 +73,7 @@ pub fn print_db(table: String, conn: Connection) {
 ///
 pub fn insert_bookmarks(
   bookmarks: List(Bookmark),
-  table: String,
+  table: BookmarkTable,
   conn: Connection,
 ) {
   // Create the table if necessary.
