@@ -12,14 +12,6 @@ pub type Id =
 pub type BookmarkTable =
   String
 
-pub type TableDiff {
-  TableDiff(added: List(Id), removed: List(Id), modified: List(Id))
-}
-
-pub type MergeArgs {
-  MergeArgs(base: BookmarkTable, current: BookmarkTable, other: BookmarkTable)
-}
-
 /// Find the URLs present in the target table but not in source table.
 ///
 pub fn added_urls(
@@ -107,18 +99,85 @@ pub fn insert_ids(
     sqlight.query(query, on: conn, with: with, expecting: dynamic.dynamic)
 }
 
-/// Compute the bookmarks diff.
+/// Copy the rows from the source table to the target table.
 ///
-pub fn bookmarks_diff(conn: Connection, args: MergeArgs) -> TableDiff {
-  let added = added_urls(conn, source: args.current, target: args.other)
-  let modified = modified_urls(conn, source: args.other, target: args.current)
-  let removed = added_urls(conn, source: args.current, target: args.base)
+pub fn modify_ids(
+  conn: Connection,
+  ids: List(Id),
+  source source: BookmarkTable,
+  target target: BookmarkTable,
+) {
+  let query =
+    "
+  UPDATE {target} AS t1
+  SET metadata = (SELECT metadata FROM {source} AS t2 WHERE t2.id = t1.id),
+      tags = (SELECT tags FROM {source} AS t2 WHERE t2.id = t1.id),
+      desc = (SELECT desc FROM {source} AS t2 WHERE t2.id = t1.id),
+      flags = (SELECT flags FROM {source} AS t2 WHERE t2.id = t1.id)
+  WHERE t1.id IN
+  "
+    |> string.replace(each: "{source}", with: source)
+    |> string.replace(each: "{target}", with: target)
 
-  TableDiff(added, removed, modified)
+  let query =
+    ids
+    |> list.map(fn(_) { "?" })
+    |> string.join(", ")
+    |> string.append(" (", _)
+    |> string.append(");")
+    |> string.append(query, _)
+
+  let with =
+    ids
+    |> list.map(fn(i) { sqlight.int(i) })
+
+  let assert Ok(_) =
+    sqlight.query(query, on: conn, with: with, expecting: dynamic.dynamic)
 }
 
-pub fn apply_diff(conn: Connection, args: MergeArgs, diff: TableDiff) {
-  let _ = insert_ids(conn, diff.added, source: args.other, target: args.current)
+/// Remove the rows from the table.
+///
+pub fn remove_ids(conn: Connection, ids: List(Id), table: BookmarkTable) {
+  let query =
+    "
+  DELETE FROM {table} as t
+  WHERE t.id in
+  "
+    |> string.replace(each: "{table}", with: table)
+
+  let query =
+    ids
+    |> list.map(fn(_) { "?" })
+    |> string.join(", ")
+    |> string.append(" (", _)
+    |> string.append(");")
+    |> string.append(query, _)
+
+  let with =
+    ids
+    |> list.map(fn(i) { sqlight.int(i) })
+
+  let assert Ok(_) =
+    sqlight.query(query, on: conn, with: with, expecting: dynamic.dynamic)
+}
+
+/// Finds the added, modified and removed bookmarks between the "current"
+/// table, the "other" table and the "base" table. Then the modifications are
+/// applied to the "current" table.
+///
+pub fn bookmarks_diff(
+  conn: Connection,
+  base base: BookmarkTable,
+  current current: BookmarkTable,
+  other other: BookmarkTable,
+) {
+  let added = added_urls(conn, source: current, target: other)
+  let modified = modified_urls(conn, source: current, target: other)
+  let removed = added_urls(conn, source: current, target: base)
+
+  let _ = modify_ids(conn, modified, source: other, target: current)
+  let _ = insert_ids(conn, added, source: other, target: current)
+  let _ = remove_ids(conn, removed, current)
 }
 
 /// Attach the multiple databases into a single SQLite connection and provide
@@ -128,7 +187,7 @@ pub fn attach_dbs(
   base: String,
   current: String,
   other: String,
-  f: fn(Connection, MergeArgs) -> a,
+  f: fn(Connection, BookmarkTable, BookmarkTable, BookmarkTable) -> a,
 ) -> a {
   use conn <- sqlight.with_connection(current)
 
@@ -141,9 +200,12 @@ pub fn attach_dbs(
   let assert Ok(Nil) = sqlight.exec(query, on: conn)
 
   // Point to the bookmarks tables.
-  let args = MergeArgs("base.bookmarks", "main.bookmarks", "other.bookmarks")
-
-  f(conn, args)
+  let #(base, current, other) = #(
+    "base.bookmarks",
+    "main.bookmarks",
+    "other.bookmarks",
+  )
+  f(conn, base, current, other)
 }
 
 pub fn main() {
@@ -163,7 +225,6 @@ pub fn main() {
     False -> Error("Some of the input files do not exist")
   }
 
-  use conn, args <- attach_dbs(base, current, other)
-  let diff = bookmarks_diff(conn, args)
-  let _ = apply_diff(conn, args, diff)
+  use conn, base, current, other <- attach_dbs(base, current, other)
+  let _ = bookmarks_diff(conn, base, current, other)
 }
