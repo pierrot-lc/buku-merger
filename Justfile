@@ -3,3 +3,6 @@ bookmarks-properties:
 
 bookmarks-head:
   sqlite3 bookmarks.db "SELECT * FROM bookmarks WHERE bookmarks.id < 5;"
+
+gleam-compile:
+  gleam run -m gleescript

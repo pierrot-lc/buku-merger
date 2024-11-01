@@ -209,20 +209,23 @@ pub fn attach_dbs(
 }
 
 pub fn main() {
-  let assert Ok(#(base, current, other)) = case argv.load().arguments {
-    [base, current, other] -> Ok(#(base, current, other))
-    _ -> Error("Usage: ./buku_merger <base> <current> <other>")
+  // Check input args.
+  let #(base, current, other) = case argv.load().arguments {
+    [base, current, other] -> #(base, current, other)
+    _ -> panic as "Usage: ./buku_merger <base> <current> <other>"
   }
 
-  // Check if input files exist.
-  let assert Ok(are_files) =
-    [base, current, other]
-    |> list.map(simplifile.is_file)
-    |> result.all
+  // Make sure the files exists.
+  let exists = case
+    [base, current, other] |> list.map(simplifile.is_file) |> result.all
+  {
+    Error(_) -> panic as "File error!"
+    Ok(exists) -> exists
+  }
 
-  let assert Ok(Nil) = case are_files |> list.all(fn(b) { b }) {
-    True -> Ok(Nil)
-    False -> Error("Some of the input files do not exist")
+  case exists |> list.all(fn(a) { a }) {
+    False -> panic as "One of the input file does not exist!"
+    True -> Nil
   }
 
   use conn, base, current, other <- attach_dbs(base, current, other)

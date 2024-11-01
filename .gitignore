@@ -4,3 +4,4 @@
 erl_crash.dump
 *.db
 *.sqlite3
+buku_merger
