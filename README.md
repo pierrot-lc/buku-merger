@@ -1,6 +1,6 @@
 # Buku Merger
 
-Custom Git driver to handle merge conflicts of your [buku](buku) bookmarks.
+Custom git driver to handle merge conflicts of your [buku](buku) bookmarks.
 
 I had the idea of using git to sync my bookmarks, _which are stored as a
 SQLite database_. The first merge conflict proved me that it was a bad idea. But
@@ -15,7 +15,7 @@ Feel free to use it for your own buku git repository!
 **From source:**
 
 1. Clone the repository.
-1. Install [Gleam](gleam)
+1. Install [Gleam](gleam).
 1. Run `gleam run -m gleescript`.
 1. Add the generated `buku_merger` to your `PATH`.
 
@@ -44,7 +44,7 @@ Where:
 - `<base>` is the latest common ancestor between the two conflicting databases.
 
 To use the tool automatically when there's a conflict, you need to add the driver
-to your Git configuration:
+to your git configuration:
 
 ```gitconfig
 # .gitconfig or config
@@ -71,16 +71,15 @@ Place this file at the root of your buku repository.
 
 The merge conflict is handled in two phases:
 
-1. Finds the modified rows from `<other>` w.r.t. `<current>` and apply those
+1. Identify rows modified in `<other>` compared to `<base>` and apply those
    modifications to `<current>`.
-1. Finds the new rows from `<other>` that do not exist in `<current>` and them
-   to it.
-1. ~~Finds the removed rows from `<other>` that are still present in `<base>` and
+1. Find new rows in `<other>` that do not exist in `<current>` and add them.
+1. ~~Find removed rows from `<other>` that are still present in `<base>` and
    remove them from `<current>`.~~
 
-The final file `<current>` is what git uses as the merged version of the file.
+The final file `<current>` is used by git as the merged version.
 
-_I do not delete the bookmarks anymore as it is too easy to mess everything up._
+_I no longer delete the bookmarks, as it is too easy to mess everything up._
 
 ## Shoutouts
 
