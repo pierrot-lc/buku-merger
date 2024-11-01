@@ -161,25 +161,6 @@ pub fn remove_ids(conn: Connection, ids: List(Id), table: BookmarkTable) {
     sqlight.query(query, on: conn, with: with, expecting: dynamic.dynamic)
 }
 
-/// Finds the added, modified and removed bookmarks between the "current"
-/// table, the "other" table and the "base" table. Then the modifications are
-/// applied to the "current" table.
-///
-pub fn bookmarks_diff(
-  conn: Connection,
-  base base: BookmarkTable,
-  current current: BookmarkTable,
-  other other: BookmarkTable,
-) {
-  let added = added_urls(conn, source: current, target: other)
-  let modified = modified_urls(conn, source: current, target: other)
-  let removed = added_urls(conn, source: current, target: base)
-
-  let _ = modify_ids(conn, modified, source: other, target: current)
-  let _ = insert_ids(conn, added, source: other, target: current)
-  let _ = remove_ids(conn, removed, current)
-}
-
 /// Attach the multiple databases into a single SQLite connection and provide
 /// the associated bookmark tables.
 ///
@@ -206,6 +187,23 @@ pub fn attach_dbs(
     "other.bookmarks",
   )
   f(conn, base, current, other)
+}
+
+/// Finds the added and modified bookmarks between the "current" table, the
+/// "other" table and the "base" table. Then the modifications are applied to
+/// the "current" table.
+///
+pub fn bookmarks_diff(
+  conn: Connection,
+  base base: BookmarkTable,
+  current current: BookmarkTable,
+  other other: BookmarkTable,
+) {
+  let added = added_urls(conn, source: current, target: other)
+  let modified = modified_urls(conn, source: current, target: other)
+
+  let _ = modify_ids(conn, modified, source: other, target: current)
+  let _ = insert_ids(conn, added, source: other, target: current)
 }
 
 pub fn main() {
