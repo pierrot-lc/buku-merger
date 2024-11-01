@@ -1,6 +1,6 @@
 # Buku Merger
 
-Custom git driver to handle merge conflicts of your [buku](buku) bookmarks.
+Custom git driver to handle merge conflicts of your [buku][buku] bookmarks.
 
 I had the idea of using git to sync my bookmarks, _which are stored as a
 SQLite database_. The first merge conflict proved me that it was a bad idea. But
@@ -15,7 +15,7 @@ Feel free to use it for your own buku git repository!
 **From source:**
 
 1. Clone the repository.
-1. Install [Gleam](gleam).
+1. Install [Gleam][gleam].
 1. Run `gleam run -m gleescript`.
 1. Add the generated `buku_merger` to your `PATH`.
 
@@ -83,10 +83,10 @@ _I no longer delete the bookmarks, as it is too easy to mess everything up._
 
 ## Shoutouts
 
-This tool is made using the awesome [Gleam](gleam) language and uses
-[sqlight](sqlight) to interface with SQLite.
+This tool is made using the awesome [Gleam][gleam] language and uses
+[sqlight][sqlight] to interface with SQLite.
 
-The flake uses [nix-gleam](nix-gleam) to generate the package derivation
+The flake uses [nix-gleam][nix-gleam] to generate the package derivation
 effortlessly.
 
 [buku]: https://github.com/jarun/buku
