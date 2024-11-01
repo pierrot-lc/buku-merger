@@ -19,22 +19,15 @@
       ];
     };
 
-    buildPackages = with pkgs; [
-      erlang_nox
-      gleam
-      rebar3
-    ];
-
-    devPackages = with pkgs;
-      [
-        just
-        sqlite
-      ]
-      ++ buildPackages;
-
     shell = pkgs.mkShell {
       name = "shell";
-      packages = devPackages;
+      packages = with pkgs; [
+        erlang_nox
+        gleam
+        just
+        rebar3
+        sqlite
+      ];
     };
 
     package = pkgs.buildGleamApplication {
