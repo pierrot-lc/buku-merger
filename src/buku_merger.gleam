@@ -195,7 +195,7 @@ pub fn attach_dbs(
 ///
 pub fn bookmarks_diff(
   conn: Connection,
-  base base: BookmarkTable,
+  base _base: BookmarkTable,
   current current: BookmarkTable,
   other other: BookmarkTable,
 ) {
